@@ -1,5 +1,5 @@
 import { compare } from "bcryptjs";
-import prismaClient from "../prisma";
+import prismaClient from "../../prisma";
 import { sign } from 'jsonwebtoken';
 
 interface AuthUserServiceProps{
