@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -14,12 +13,11 @@ enum Role {
 }
 
 model User {
-  id       String @id @default(uuid())
-  name     String
-  email    String @unique
-  password String
-  role     Role   @default(STAFF)
-
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(STAFF)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -27,30 +25,29 @@ model User {
 }
 
 model Category {
-  id       String    @id @default(uuid())
-  name     String
-  products Product[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(uuid())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
 
   @@map("categories")
 }
 
 model Product {
-  id           String  @id @default(uuid())
-  name         String
-  price        Int //centavos
-  descriptions String
-  banner       String
-  disable      Boolean @default(false)
+  id          String  @id @default(uuid())
+  name        String
+  price       Int // centavos
+  description String
+  banner      String
+  disabled    Boolean @default(false)
+
+  items Item[]
 
   category_id String
   category    Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  items     Item[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("products")
 }
@@ -58,10 +55,11 @@ model Product {
 model Order {
   id     String  @id @default(uuid())
   table  Int
-  status Boolean @default(false) //false = pendente , true = pronto
-  draft  Boolean @default(true) //rascunho = false,  enviado = true
+  status Boolean @default(false) // false = Pendente, true = Pronto
+  draft  Boolean @default(true) // false ainda é rascunho, foi enviado para cozinha
   name   String?
-  items  Item[]
+
+  items Item[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -70,17 +68,16 @@ model Order {
 }
 
 model Item {
-  id     String @id @default(uuid())
-  amount Int
+  id        String   @id @default(uuid())
+  amount    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   order_id String
   order    Order  @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
   product_id String
   product    Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@map("items")
 }
