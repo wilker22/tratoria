@@ -1,3 +1,4 @@
+import  prismaClient  from '../../generated/prisma/client';
 import { Request, Response } from 'express';
 import { CreateUserService, CreateUserService } from '../../services/user/CreateUserService';
 
