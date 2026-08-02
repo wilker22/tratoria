@@ -23,10 +23,17 @@ class CreateUserService{
                 name: name,
                 email: email,
                 password: passwordHash
-            } 
+            }, 
+            select:{
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                createdAt: true
+            }
         })
 
-        return `Usuário ${name} criado com sucesso!`;
+        return user;
     }
 }
 

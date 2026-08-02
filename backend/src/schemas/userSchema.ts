@@ -14,3 +14,10 @@ export const createUserSchema = z.object({
     }),
 });
 
+export const authUserSchema = z.object({
+    body: z.object({
+         email: z.email({ message: "Necessário ser e-mail válido"}),
+         password: z.string( {message: "A senha é obrigatória" }).min(1, { message: "A senha é obrigatória" }),
+
+    })
+})
