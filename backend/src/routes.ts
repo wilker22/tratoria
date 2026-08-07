@@ -6,6 +6,7 @@ import { createUserSchema, authUserSchema } from './schemas/userSchema';
 import { DetailUserController } from './controllers/user/DetailUserController';
 import { isAuthenticated } from './midlewares/isAuthenticated';
 import { CreateCategoryController } from './controllers/category/CreateCategoryController';
+import { isAdmin } from './midlewares/isAdmin';
 
 
 const router = Router();
@@ -17,6 +18,6 @@ router.post("/session", validateSchema(authUserSchema), new AuthUserController()
 router.get("/me", isAuthenticated, new DetailUserController().handle);
 
 //rotas category
-router.post("/category", isAuthenticated, new CreateCategoryController().handle);
+router.post("/category", isAuthenticated, isAdmin, new CreateCategoryController().handle);
 
 export { router };
