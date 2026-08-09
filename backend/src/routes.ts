@@ -9,6 +9,7 @@ import { CreateCategoryController } from './controllers/category/CreateCategoryC
 import { isAdmin } from './midlewares/isAdmin';
 import { createCategorySchema } from './schemas/createCategorySchema';
 import { ListCategoryController } from './controllers/category/ListCategoryController';
+import { CreateProductController } from './controllers/product/CreateProductController';
 
 
 const router = Router();
@@ -22,6 +23,10 @@ router.get("/me", isAuthenticated, new DetailUserController().handle);
 //rotas category
 router.post("/category", isAuthenticated, isAdmin, validateSchema(createCategorySchema), new CreateCategoryController().handle);
 router.get("/category", isAuthenticated, new ListCategoryController().handle);
+
+//rotas product
+router.post("product", isAuthenticated, isAdmin, new CreateProductController().handle); 
+
 
 
 export { router };
