@@ -28,7 +28,7 @@ router.post("/category", isAuthenticated, isAdmin, validateSchema(createCategory
 router.get("/category", isAuthenticated, new ListCategoryController().handle);
 
 //rotas product
-router.post("product", isAuthenticated, isAdmin, upload.single('file'), new CreateProductController().handle); 
+router.post("/product", isAuthenticated, isAdmin, upload.single('file'), new CreateProductController().handle); 
 
 
 
