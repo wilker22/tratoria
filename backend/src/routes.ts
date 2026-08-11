@@ -12,6 +12,7 @@ import { isAdmin } from './midlewares/isAdmin';
 import { createCategorySchema } from './schemas/createCategorySchema';
 import { ListCategoryController } from './controllers/category/ListCategoryController';
 import { CreateProductController } from './controllers/product/CreateProductController';
+import { createProductSchema } from './schemas/productSchema';
 
 
 const router = Router();
@@ -28,7 +29,7 @@ router.post("/category", isAuthenticated, isAdmin, validateSchema(createCategory
 router.get("/category", isAuthenticated, new ListCategoryController().handle);
 
 //rotas product
-router.post("/product", isAuthenticated, isAdmin, upload.single('file'), new CreateProductController().handle); 
+router.post("/product", isAuthenticated, isAdmin, upload.single('file'), validateSchema(createProductSchema), new CreateProductController().handle); 
 
 
 
