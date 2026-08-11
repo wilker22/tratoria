@@ -52,15 +52,35 @@ class CreateProductService {
         bufferStream.pipe(uploadStream);
       });
 
-      console.log(result);
+      bannerUrl = result.secure_url;
+
     } catch (error) {
       console.log(error);
       throw new Error("Erro ao fazer o upload a imagem!");
     }
 
     // SALVAR A URL DA IMAGEM E OS DADOS NO BANCO COMO UM NOVO PRODUTO
+    const product = await prismaClient.product.create({
+      data:{
+        name: name,
+        price: price,
+        description: description,
+        banner: bannerUrl,
+        category_id: category_id
+      },
+      select:{
+        id: true,
+        name: true,
+        price: true,
+        description: true,
+        category_id: true,
+        banner: true,
+        createdAt: true,
 
-    return "PRODUTO CRIADO";
+      }
+    });
+
+    return product;
   }
 }
 

@@ -13,7 +13,7 @@ class CreateProductController {
 
     const product = await createProduct.execute({
       name: name,
-      price: price,
+      price: parseInt(price), // converte a string para int
       description: description,
       category_id: category_id,
       imageBuffer: req.file.buffer,
