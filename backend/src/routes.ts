@@ -12,9 +12,10 @@ import { isAdmin } from './midlewares/isAdmin';
 import { createCategorySchema } from './schemas/createCategorySchema';
 import { ListCategoryController } from './controllers/category/ListCategoryController';
 import { CreateProductController } from './controllers/product/CreateProductController';
-import { createProductSchema, listProductSchema } from './schemas/productSchema';
+import { createProductSchema, listProductByCategorySchema, listProductSchema } from './schemas/productSchema';
 import { ListProductsController } from './controllers/product/ListProductsController';
 import { DeleteProductController } from './controllers/product/DeleteProductController';
+import { ListProductByCategoryController } from './controllers/product/ListProductByCategoryController';
 
 
 const router = Router();
@@ -29,11 +30,14 @@ router.get("/me", isAuthenticated, new DetailUserController().handle);
 //rotas category
 router.post("/category", isAuthenticated, isAdmin, validateSchema(createCategorySchema), new CreateCategoryController().handle);
 router.get("/category", isAuthenticated, new ListCategoryController().handle);
+router.get("/category/product", isAuthenticated, validateSchema(listProductByCategorySchema), new ListProductByCategoryController().handle );
+
 
 //rotas product
 router.post("/product", isAuthenticated, isAdmin, upload.single('file'), validateSchema(createProductSchema), new CreateProductController().handle); 
 router.get("/products", isAuthenticated, validateSchema(listProductSchema), new ListProductsController().handle);
 router.delete("/product", isAuthenticated, isAdmin, new DeleteProductController().handle);
+
 
 
 export { router };
