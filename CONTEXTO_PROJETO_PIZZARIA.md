@@ -6,11 +6,12 @@
 - **Versão do backend:** `1.0.0`
 - **Nome apresentado no README:** `PROJETO TRATORIA`
 - **Tipo:** API REST para gerenciamento de uma pizzaria/tratoria
-- **Estado atual:** backend em desenvolvimento, com usuários, autenticação, consulta do usuário autenticado e criação de categorias implementados
+- **Estado atual:** backend em desenvolvimento, com usuários, autenticação, categorias (criação e listagem) e produtos (criação com upload de imagem, listagem e exclusão lógica) implementados
 - **Linguagem:** TypeScript
 - **Runtime:** Node.js
 - **Banco de dados:** PostgreSQL
 - **ORM:** Prisma ORM 7 com driver adapter `@prisma/adapter-pg`
+- **Armazenamento de imagens:** Cloudinary (upload via Multer em memória)
 
 O ZIP analisado não contém uma aplicação frontend funcional. Na raiz existe apenas um `package.json` com `bcryptjs`; a implementação efetiva está em `backend/`.
 
@@ -26,6 +27,8 @@ flowchart TD
     D --> E[Services]
     E --> F[Prisma Client]
     F --> G[(PostgreSQL)]
+    E --> H[Cloudinary]
+    H --> E
     E --> D
     D --> A
 ```
@@ -33,15 +36,21 @@ flowchart TD
 ### Fluxo de uma requisição
 
 1. **Rotas:** recebem a requisição e definem quais middlewares e controller serão executados.
-2. **Middlewares:** validam o schema, autenticam o token e, quando necessário, verificam se o usuário é administrador.
-3. **Controllers:** extraem dados de `body` ou do objeto `Request`, chamam o service correspondente e definem a resposta HTTP.
-4. **Services:** concentram a regra de negócio, consultam ou alteram o banco pelo Prisma e devolvem o resultado ao controller.
+2. **Middlewares:** validam o schema, autenticam o token, verificam perfil administrativo e, quando necessário, processam upload de arquivo via Multer.
+3. **Controllers:** extraem dados de `body`, `query`, `params` ou `file` do objeto `Request`, chamam o service correspondente e definem a resposta HTTP.
+4. **Services:** concentram a regra de negócio, consultam ou alteram o banco pelo Prisma, integram com serviços externos (Cloudinary) e devolvem o resultado ao controller.
 5. **Prisma/PostgreSQL:** realizam a persistência e a recuperação dos dados.
 6. **Tratamento global de erros:** erros lançados pelas camadas seguintes chegam ao middleware final de erro em `server.ts`.
 
 ### Exemplo real: criação de categoria
 
 `POST /category` → `isAuthenticated` → `isAdmin` → `validateSchema(createCategorySchema)` → `CreateCategoryController` → `CreateCategoryService` → `prismaClient.category.create()` → PostgreSQL.
+
+### Exemplo real: criação de produto com imagem
+
+`POST /product` → `isAuthenticated` → `isAdmin` → `upload.single('file')` → `validateSchema(createProductSchema)` → `CreateProductController` → `CreateProductService` → upload para Cloudinary (pasta `products`) → `prismaClient.product.create()` → PostgreSQL.
+
+O campo `banner` do produto armazena a URL segura (`secure_url`) retornada pelo Cloudinary, e não o arquivo em si.
 
 ## 3. Tecnologias e versões
 
@@ -54,10 +63,12 @@ As versões abaixo são as versões exatas resolvidas no `backend/package-lock.j
 | `@prisma/adapter-pg` | 7.9.1 | Adaptador PostgreSQL utilizado pelo Prisma 7 |
 | `@prisma/client` | 7.9.1 | Cliente ORM gerado para acesso ao banco |
 | `bcryptjs` | 3.0.3 | Hash e comparação de senhas |
+| `cloudinary` | 2.10.0 | Upload e hospedagem de imagens de produtos |
 | `cors` | 2.8.6 | Liberação de requisições entre origens |
 | `dotenv` | 17.4.2 | Carregamento de variáveis do arquivo `.env` |
 | `express` | 5.2.1 | Framework HTTP e roteamento |
 | `jsonwebtoken` | 9.0.3 | Geração e validação de tokens JWT |
+| `multer` | 2.2.0 | Recepção de arquivos multipart/form-data |
 | `pg` | 8.22.0 | Driver PostgreSQL |
 | `tsx` | 4.23.1 | Execução e recarga de TypeScript em desenvolvimento |
 | `zod` | 4.4.3 | Validação dos dados das requisições |
@@ -71,6 +82,7 @@ As versões abaixo são as versões exatas resolvidas no `backend/package-lock.j
 | `@types/cors` | 2.8.19 |
 | `@types/express` | 5.0.6 |
 | `@types/jsonwebtoken` | 9.0.10 |
+| `@types/multer` | 2.2.0 |
 | `@types/node` | 26.1.2 |
 | `@types/pg` | 8.20.3 |
 
@@ -93,6 +105,7 @@ O projeto não fixa uma versão do Node.js por `engines`, `.nvmrc` ou `.node-ver
 pizzaria/
 ├── README.md
 ├── package.json
+├── CONTEXTO_PROJETO_PIZZARIA.md
 └── backend/
     ├── package.json
     ├── package-lock.json
@@ -105,8 +118,17 @@ pizzaria/
     │           └── migration.sql
     └── src/
         ├── @types/express/index.d.ts
+        ├── config/
+        │   ├── cloudinary.ts
+        │   └── multer.ts
         ├── controllers/
-        │   ├── category/CreateCategoryController.ts
+        │   ├── category/
+        │   │   ├── CreateCategoryController.ts
+        │   │   └── ListCategoryController.ts
+        │   ├── product/
+        │   │   ├── CreateProductController.ts
+        │   │   ├── DeleteProductController.ts
+        │   │   └── ListProductsController.ts
         │   └── user/
         │       ├── AuthUserController.ts
         │       ├── CreateUserController.ts
@@ -119,9 +141,16 @@ pizzaria/
         ├── prisma/index.ts
         ├── schemas/
         │   ├── createCategorySchema.ts
+        │   ├── productSchema.ts
         │   └── userSchema.ts
         ├── services/
-        │   ├── category/CreateCategoryService.ts
+        │   ├── category/
+        │   │   ├── CreateCategoryService.ts
+        │   │   └── ListCatgoryService.ts
+        │   ├── product/
+        │   │   ├── CreateProductService.ts
+        │   │   ├── DeleteProductService.ts
+        │   │   └── ListProductService.ts
         │   └── user/
         │       ├── AuthUserService.ts
         │       ├── CreateUserService.ts
@@ -135,9 +164,11 @@ pizzaria/
 | Pasta/arquivo | Responsabilidade |
 |---|---|
 | `src/server.ts` | Inicialização do Express, JSON, CORS, rotas, tratamento de erros e porta HTTP |
-| `src/routes.ts` | Registro central dos endpoints e cadeia de middlewares |
+| `src/routes.ts` | Registro central dos endpoints, Multer e cadeia de middlewares |
+| `src/config/cloudinary.ts` | Configuração do SDK Cloudinary com variáveis de ambiente |
+| `src/config/multer.ts` | Configuração de upload em memória, limite de 4 MB e filtro de MIME types |
 | `src/controllers/` | Adaptação entre HTTP e os casos de uso |
-| `src/services/` | Regras de negócio e operações pelo Prisma |
+| `src/services/` | Regras de negócio, operações pelo Prisma e integração com Cloudinary |
 | `src/midlewares/` | Validação, autenticação e autorização |
 | `src/schemas/` | Schemas Zod das requisições |
 | `src/prisma/index.ts` | Inicialização do Prisma Client com `PrismaPg` |
@@ -146,7 +177,7 @@ pizzaria/
 | `prisma/migrations/` | Histórico SQL da estrutura do banco |
 | `src/@types/express/` | Extensão do tipo `Express.Request` com `user_id` |
 
-Observação: a pasta está escrita como `midlewares`; a grafia convencional seria `middlewares`.
+Observação: a pasta está escrita como `midlewares`; a grafia convencional seria `middlewares`. O arquivo `ListCatgoryService.ts` também possui typo no nome (`Catgory` em vez de `Category`).
 
 ## 5. Inicialização e configuração HTTP
 
@@ -164,12 +195,16 @@ Não existe prefixo global como `/api` ou `/v1`. Assim, os caminhos documentados
 
 ## 6. Endpoints implementados
 
-| Método | Endpoint | Acesso | Validação | Controller | Resposta de sucesso |
+| Método | Endpoint | Acesso | Validação / Upload | Controller | Resposta de sucesso |
 |---|---|---|---|---|---|
-| `POST` | `/users` | Público | `createUserSchema` | `CreateUserController` | Usuário criado, sem senha; atualmente HTTP `200` |
+| `POST` | `/users` | Público | `createUserSchema` | `CreateUserController` | Usuário criado, sem senha; HTTP `200` |
 | `POST` | `/session` | Público | `authUserSchema` | `AuthUserController` | Dados do usuário e token JWT; HTTP `200` |
 | `GET` | `/me` | JWT | Não possui schema | `DetailUserController` | Dados do usuário autenticado; HTTP `200` |
 | `POST` | `/category` | JWT + perfil `ADMIN` | `createCategorySchema` | `CreateCategoryController` | Categoria criada; HTTP `201` |
+| `GET` | `/category` | JWT | Não possui schema | `ListCategoryController` | Lista de categorias; HTTP `200` |
+| `POST` | `/product` | JWT + perfil `ADMIN` | Multer (`file`) + `createProductSchema` | `CreateProductController` | Produto criado com URL do banner; HTTP `200` |
+| `GET` | `/products` | JWT | `listProductSchema` (query) | `ListProductsController` | Lista de produtos; HTTP `200` |
+| `DELETE` | `/product` | JWT + perfil `ADMIN` | Não possui schema | `DeleteProductController` | Produto arquivado (soft delete); HTTP `200` |
 
 ### 6.1. Criar usuário
 
@@ -278,6 +313,132 @@ Content-Type: application/json
 }
 ```
 
+### 6.5. Listar categorias
+
+```http
+GET /category
+Authorization: Bearer TOKEN_JWT
+```
+
+**Regras**
+
+- usuário autenticado;
+- retorna `id`, `name` e `createdAt` de cada categoria;
+- ordenação decrescente por `createdAt`.
+
+**Resposta HTTP 200**
+
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Pizzas tradicionais",
+    "createdAt": "data-hora"
+  }
+]
+```
+
+### 6.6. Criar produto
+
+```http
+POST /product
+Authorization: Bearer TOKEN_JWT
+Content-Type: multipart/form-data
+```
+
+**Campos do formulário**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|---|---|---|---|
+| `name` | string | Sim | Nome do produto |
+| `price` | string | Sim | Preço em centavos (convertido para `int` no controller) |
+| `description` | string | Sim | Descrição do produto |
+| `category_id` | string (UUID) | Sim | ID de uma categoria existente |
+| `file` | arquivo | Sim | Imagem do produto (JPG, JPEG ou PNG; máx. 4 MB) |
+
+**Regras**
+
+- usuário autenticado com perfil `ADMIN`;
+- a categoria informada deve existir no banco;
+- a imagem é enviada para o Cloudinary na pasta `products`;
+- o campo `banner` no banco recebe a URL segura retornada pelo Cloudinary;
+- produto criado com `disabled: false` por padrão.
+
+**Resposta HTTP 200**
+
+```json
+{
+  "id": "uuid",
+  "name": "Pizza Margherita",
+  "price": 4500,
+  "description": "Molho, mussarela e manjericão",
+  "category_id": "uuid-da-categoria",
+  "banner": "https://res.cloudinary.com/.../products/....jpg",
+  "createdAt": "data-hora"
+}
+```
+
+### 6.7. Listar produtos
+
+```http
+GET /products?disabled=false
+Authorization: Bearer TOKEN_JWT
+```
+
+**Parâmetros de query**
+
+| Parâmetro | Tipo | Padrão | Descrição |
+|---|---|---|---|
+| `disabled` | `"true"` ou `"false"` | `"false"` | Filtra produtos ativos (`false`) ou arquivados (`true`) |
+
+**Regras**
+
+- usuário autenticado;
+- retorna dados do produto incluindo a categoria relacionada (`id` e `name`);
+- ordenação decrescente por `createdAt`.
+
+**Resposta HTTP 200**
+
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Pizza Margherita",
+    "price": 4500,
+    "description": "Molho, mussarela e manjericão",
+    "banner": "https://res.cloudinary.com/.../products/....jpg",
+    "disabled": false,
+    "category_id": "uuid-da-categoria",
+    "createdAt": "data-hora",
+    "category": {
+      "id": "uuid-da-categoria",
+      "name": "Pizzas tradicionais"
+    }
+  }
+]
+```
+
+### 6.8. Excluir produto (soft delete)
+
+```http
+DELETE /product?product_id=UUID_DO_PRODUTO
+Authorization: Bearer TOKEN_JWT
+```
+
+**Regras**
+
+- usuário autenticado com perfil `ADMIN`;
+- não remove o registro do banco; define `disabled: true`;
+- o produto deixa de aparecer na listagem padrão (`disabled=false`).
+
+**Resposta HTTP 200**
+
+```json
+{
+  "message": "Produto deletado/arquivado com sucesso!"
+}
+```
+
 ## 7. Autenticação e autorização
 
 ### Autenticação
@@ -296,12 +457,37 @@ O middleware `isAdmin` usa `req.user_id` para consultar o usuário no banco e pe
 
 Perfis existentes:
 
-- `STAFF`: padrão para novos usuários;
-- `ADMIN`: autorizado a criar categorias.
+- `STAFF`: padrão para novos usuários; pode listar categorias e produtos;
+- `ADMIN`: autorizado a criar categorias e produtos, e arquivar produtos.
 
 Não existe endpoint implementado para promover um usuário a `ADMIN`; essa alteração precisa ocorrer diretamente no banco, por seed, Prisma Studio ou futura funcionalidade administrativa.
 
-## 8. Validação dos schemas
+## 8. Upload de imagens
+
+### Multer (`src/config/multer.ts`)
+
+- **Storage:** `memoryStorage()` — o arquivo fica em `req.file.buffer` para envio direto ao Cloudinary;
+- **Limite de tamanho:** 4 MB;
+- **Formatos aceitos:** `image/jpeg`, `image/jpg`, `image/png`;
+- **Campo do formulário:** `file` (configurado em `upload.single('file')` na rota).
+
+### Cloudinary (`src/config/cloudinary.ts`)
+
+Configurado com três variáveis de ambiente:
+
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+
+No `CreateProductService`, o upload usa `cloudinary.uploader.upload_stream` com:
+
+- pasta destino: `products`;
+- `resource_type`: `image`;
+- `public_id`: timestamp + nome do arquivo (sem extensão).
+
+A URL retornada (`secure_url`) é persistida no campo `banner` do produto.
+
+## 9. Validação dos schemas
 
 O projeto usa **Zod 4.4.3**. O middleware genérico `validateSchema` monta o objeto abaixo e executa `schema.parseAsync()`:
 
@@ -324,6 +510,8 @@ Quando o Zod rejeita os dados, a API responde HTTP `400`:
 }
 ```
 
+O middleware valida, mas **não reatribui** os valores parseados de volta a `req.body` ou `req.query`. Transformações definidas nos schemas (como a de `listProductSchema`) não afetam automaticamente o que o controller lê.
+
 ### Schemas atuais
 
 | Schema | Campo | Regra |
@@ -334,8 +522,15 @@ Quando o Zod rejeita os dados, a API responde HTTP `400`:
 | `authUserSchema` | `body.email` | e-mail válido |
 | `authUserSchema` | `body.password` | string, mínimo 1 caractere |
 | `createCategorySchema` | `body.name` | string, mínimo 2 caracteres |
+| `createProductSchema` | `body.name` | string, mínimo 1 caractere |
+| `createProductSchema` | `body.price` | string, mínimo 1 caractere |
+| `createProductSchema` | `body.description` | string, mínimo 1 caractere |
+| `createProductSchema` | `body.category_id` | string (UUID da categoria) |
+| `listProductSchema` | `query.disabled` | enum `"true"` \| `"false"`, opcional, padrão `"false"` |
 
-## 9. Banco de dados e Prisma
+A validação da presença do arquivo de imagem ocorre no `CreateProductController` (`req.file`), e não via Zod.
+
+## 10. Banco de dados e Prisma
 
 ### Conexão
 
@@ -400,7 +595,7 @@ erDiagram
     }
 ```
 
-### 9.1. User → tabela `users`
+### 10.1. User → tabela `users`
 
 | Campo | Tipo | Restrições/padrão |
 |---|---|---|
@@ -412,7 +607,7 @@ erDiagram
 | `createdAt` | DateTime | data atual por padrão |
 | `updatedAt` | DateTime | atualizado automaticamente pelo Prisma |
 
-### 9.2. Category → tabela `categories`
+### 10.2. Category → tabela `categories`
 
 | Campo | Tipo | Restrições/padrão |
 |---|---|---|
@@ -422,7 +617,7 @@ erDiagram
 | `updatedAt` | DateTime | atualizado automaticamente |
 | `products` | Relação | uma categoria possui vários produtos |
 
-### 9.3. Product → tabela `products`
+### 10.3. Product → tabela `products`
 
 | Campo | Tipo | Restrições/padrão |
 |---|---|---|
@@ -430,15 +625,15 @@ erDiagram
 | `name` | String | obrigatório |
 | `price` | Int | obrigatório; valor armazenado em centavos |
 | `description` | String | obrigatório |
-| `banner` | String | obrigatório; referência textual à imagem |
-| `disabled` | Boolean | `false` por padrão |
+| `banner` | String | obrigatório; URL da imagem no Cloudinary |
+| `disabled` | Boolean | `false` por padrão; `true` indica produto arquivado |
 | `category_id` | String/UUID | chave estrangeira obrigatória |
 | `createdAt` | DateTime | data atual por padrão |
 | `updatedAt` | DateTime | atualizado automaticamente |
 
 Ao excluir uma categoria, seus produtos são excluídos em cascata.
 
-### 9.4. Order → tabela `orders`
+### 10.4. Order → tabela `orders`
 
 | Campo | Tipo | Restrições/padrão |
 |---|---|---|
@@ -450,7 +645,7 @@ Ao excluir uma categoria, seus produtos são excluídos em cascata.
 | `createdAt` | DateTime | data atual por padrão |
 | `updatedAt` | DateTime | atualizado automaticamente |
 
-### 9.5. Item → tabela `items`
+### 10.5. Item → tabela `items`
 
 | Campo | Tipo | Restrições/padrão |
 |---|---|---|
@@ -472,14 +667,15 @@ Existe uma migration inicial, `20260802172104_create_tables`, que cria:
 - índice único para `users.email`;
 - chaves estrangeiras e exclusões em cascata.
 
-## 10. Variáveis de ambiente
-
-O `.env` analisado define estas chaves, sem reproduzir seus valores por segurança:
+## 11. Variáveis de ambiente
 
 | Variável | Obrigatória | Finalidade |
 |---|---|---|
 | `DATABASE_URL` | Sim | string de conexão PostgreSQL usada pelo Prisma e pelo adaptador `pg` |
 | `JWT_SECRET` | Sim | segredo de assinatura e verificação dos JWTs |
+| `CLOUDINARY_CLOUD_NAME` | Sim (para produtos) | identificador da conta Cloudinary |
+| `CLOUDINARY_API_KEY` | Sim (para produtos) | chave de API do Cloudinary |
+| `CLOUDINARY_API_SECRET` | Sim (para produtos) | segredo de API do Cloudinary |
 | `PORT` | Não | porta HTTP; padrão `3333` |
 
 Exemplo recomendado para `.env.example`:
@@ -488,11 +684,14 @@ Exemplo recomendado para `.env.example`:
 PORT=3333
 DATABASE_URL="postgresql://USUARIO:SENHA@HOST:5432/BANCO?schema=public"
 JWT_SECRET="substitua-por-um-segredo-longo-e-aleatorio"
+CLOUDINARY_CLOUD_NAME="seu-cloud-name"
+CLOUDINARY_API_KEY="sua-api-key"
+CLOUDINARY_API_SECRET="seu-api-secret"
 ```
 
 O `.env` não deve ser versionado. O `.gitignore` do backend já contém regra para arquivos `.env`.
 
-## 11. Comandos disponíveis e operação
+## 12. Comandos disponíveis e operação
 
 ### Instalação
 
@@ -529,7 +728,7 @@ O único script atualmente declarado é:
 
 Ainda não existem scripts `build`, `start`, `test`, `lint` ou `prisma:generate`.
 
-## 12. Tratamento de erros e respostas HTTP
+## 13. Tratamento de erros e respostas HTTP
 
 O middleware global considera qualquer valor que seja instância de `Error` como erro HTTP `400` e devolve sua mensagem. Caso contrário, responde `500`.
 
@@ -540,13 +739,14 @@ Principais respostas atuais:
 | Situação | Status |
 |---|---:|
 | Schema inválido | 400 |
-| Erro lançado por um service | 400 |
+| Erro lançado por um service ou controller | 400 |
+| Formato de imagem inválido (Multer) | 400 |
 | Token ausente ou inválido | 401 |
 | Usuário não administrativo | 401 |
 | Categoria criada | 201 |
 | Demais operações bem-sucedidas | 200 |
 
-## 13. Estado funcional atual
+## 14. Estado funcional atual
 
 ### Implementado
 
@@ -558,63 +758,76 @@ Principais respostas atuais:
 - perfis `STAFF` e `ADMIN`;
 - autorização administrativa;
 - criação de categoria;
+- listagem de categorias;
+- criação de produto com upload de imagem para Cloudinary;
+- listagem de produtos com filtro por status `disabled`;
+- exclusão lógica de produto (`disabled: true`);
 - validação Zod;
+- upload multipart com Multer;
 - modelagem de usuários, categorias, produtos, pedidos e itens;
 - migration inicial PostgreSQL.
 
-### Modelado, mas sem endpoints/services
+### Modelado ou parcialmente implementado, mas incompleto
 
-- produtos;
-- pedidos;
-- itens do pedido;
-- listagem, alteração e exclusão de categorias;
+- pedidos (`Order`);
+- itens do pedido (`Item`);
+- alteração e exclusão de categorias;
+- edição de produto (reativação, atualização de dados ou imagem);
+- remoção física de produto ou imagem no Cloudinary;
 - gerenciamento de perfis de usuário.
 
-## 14. Pontos de atenção encontrados
+## 15. Pontos de atenção encontrados
 
-Esta seção registra o estado observado; nenhuma correção foi aplicada ao projeto.
+Esta seção registra o estado observado no código atual; nenhuma correção foi aplicada durante a atualização deste documento.
 
 1. **Erro no `CreateUserController`:** há import duplicado de `CreateUserService` e um import incorreto/não utilizado de `prismaClient` a partir do cliente gerado. Isso deve impedir a compilação TypeScript.
-2. **Scripts incompletos:** faltam `build`, `start`, `test` e `lint`; portanto, o projeto só oferece execução em modo watch.
-3. **Versão do Node não fixada:** convém adicionar `engines` e/ou `.nvmrc`.
-4. **TypeScript 7.0.2:** é uma versão muito nova e o próprio comentário do `tsconfig` ainda menciona TypeScript 5.6. A compatibilidade da cadeia de ferramentas deve ser validada.
-5. **Status de autorização:** usuário autenticado sem permissão administrativa recebe `401`; semanticamente, `403 Forbidden` é mais apropriado.
-6. **Tratamento global:** todos os objetos `Error` viram `400`, inclusive possíveis falhas internas do banco. Recomenda-se uma classe de erro operacional com status explícito.
-7. **CORS irrestrito:** `cors()` aceita qualquer origem. Em produção, deve haver uma lista de origens permitidas.
-8. **JWT sem validação de configuração:** se `JWT_SECRET` estiver ausente, o erro ocorrerá em execução. As variáveis devem ser validadas na inicialização.
-9. **Formato Bearer pouco defensivo:** o middleware não valida explicitamente o esquema `Bearer` nem a quantidade de partes do cabeçalho.
-10. **Busca por campo único:** login e cadastro usam `findFirst` para `email`, apesar de o campo ser único; `findUnique` expressa melhor essa regra.
-11. **Criação de usuário retorna 200:** para consistência REST, o ideal seria HTTP `201`.
-12. **Categoria sem unicidade:** nomes duplicados são aceitos pela modelagem atual.
-13. **Exclusão em cascata de produto:** apagar uma categoria remove produtos e itens históricos associados. Isso pode afetar a integridade histórica de pedidos.
-14. **Sem índices adicionais:** as chaves estrangeiras e campos usados em filtros frequentes podem precisar de índices conforme o volume crescer.
-15. **Sem paginação:** ainda não existem listagens, mas endpoints futuros devem prever paginação.
-16. **Sem testes automatizados:** não foram encontrados testes unitários, de integração ou end-to-end.
-17. **Sem documentação OpenAPI:** os contratos existem apenas no código.
-18. **Services instanciados diretamente:** controllers criam os services com `new`, o que funciona, mas dificulta isolamento e mocks em testes.
-19. **Captura genérica em categoria:** `CreateCategoryService` esconde a causa original e sempre retorna “Falha ao criar categoria”.
-20. **Campos booleanos de estado:** `status` e `draft` podem gerar estados ambíguos. Enums explícitos tornam o fluxo do pedido mais claro.
-21. **README insuficiente:** contém apenas o título e não orienta instalação, configuração ou uso.
-22. **Pacote duplicado na raiz:** o `package.json` da raiz declara apenas `bcryptjs`, também presente no backend; deve-se confirmar se esse manifesto é necessário.
+2. **Typo no import de `ListProductsController`:** importa de `LIstProductService` (L maiúsculo no meio), enquanto o arquivo real é `ListProductService.ts`. Pode falhar em sistemas case-sensitive (Linux/macOS).
+3. **Typo no nome do arquivo `ListCatgoryService.ts`:** grafia incorreta de "Category".
+4. **Scripts incompletos:** faltam `build`, `start`, `test` e `lint`; portanto, o projeto só oferece execução em modo watch.
+5. **Versão do Node não fixada:** convém adicionar `engines` e/ou `.nvmrc`.
+6. **TypeScript 7.0.2:** é uma versão muito nova e o próprio comentário do `tsconfig` ainda menciona TypeScript 5.6. A compatibilidade da cadeia de ferramentas deve ser validada.
+7. **Status de autorização:** usuário autenticado sem permissão administrativa recebe `401`; semanticamente, `403 Forbidden` é mais apropriado.
+8. **Tratamento global:** todos os objetos `Error` viram `400`, inclusive possíveis falhas internas do banco ou do Cloudinary. Recomenda-se uma classe de erro operacional com status explícito.
+9. **CORS irrestrito:** `cors()` aceita qualquer origem. Em produção, deve haver uma lista de origens permitidas.
+10. **JWT e Cloudinary sem validação de configuração:** se variáveis estiverem ausentes, o erro ocorrerá em execução. As variáveis devem ser validadas na inicialização.
+11. **Formato Bearer pouco defensivo:** o middleware não valida explicitamente o esquema `Bearer` nem a quantidade de partes do cabeçalho.
+12. **Busca por campo único:** login e cadastro usam `findFirst` para `email`, apesar de o campo ser único; `findUnique` expressa melhor essa regra.
+13. **Criação de usuário e produto retornam 200:** para consistência REST, o ideal seria HTTP `201`.
+14. **Categoria e produto sem unicidade:** nomes duplicados são aceitos pela modelagem atual.
+15. **Soft delete sem reativação:** não existe endpoint para reverter `disabled: true` em um produto.
+16. **Delete de produto sem validação Zod:** `product_id` é lido de `req.query` sem schema; ausência ou UUID inválido gera erro genérico.
+17. **Imagens órfãs no Cloudinary:** ao arquivar um produto, a imagem permanece no Cloudinary; não há rotina de limpeza.
+18. **Exclusão em cascata de produto:** apagar uma categoria remove produtos e itens históricos associados. Isso pode afetar a integridade histórica de pedidos.
+19. **Sem índices adicionais:** as chaves estrangeiras e campos usados em filtros frequentes podem precisar de índices conforme o volume crescer.
+20. **Sem paginação:** listagens de categorias e produtos retornam todos os registros; endpoints futuros devem prever paginação.
+21. **Sem testes automatizados:** não foram encontrados testes unitários, de integração ou end-to-end.
+22. **Sem documentação OpenAPI:** os contratos existem apenas no código.
+23. **Services instanciados diretamente:** controllers criam os services com `new`, o que funciona, mas dificulta isolamento e mocks em testes.
+24. **Captura genérica em services:** `CreateCategoryService`, `ListCategoryService`, `ListProductService` e `DeleteProductService` escondem a causa original e retornam mensagens genéricas.
+25. **Campos booleanos de estado:** `status` e `draft` em pedidos podem gerar estados ambíguos. Enums explícitos tornam o fluxo do pedido mais claro.
+26. **README insuficiente:** contém apenas o título e não orienta instalação, configuração ou uso.
+27. **Pacote duplicado na raiz:** o `package.json` da raiz declara apenas `bcryptjs`, também presente no backend; deve-se confirmar se esse manifesto é necessário.
+28. **`validateSchema` não propaga valores parseados:** transformações Zod (ex.: `listProductSchema`) não alteram `req.query`/`req.body` usados pelos controllers.
 
-## 15. Recomendações de evolução
+## 16. Recomendações de evolução
 
 Prioridade sugerida:
 
-1. corrigir os imports do `CreateUserController` e garantir compilação limpa;
+1. corrigir os imports do `CreateUserController` e do `ListProductsController`, e renomear `ListCatgoryService.ts`;
 2. fixar uma versão estável do Node.js e confirmar a versão do TypeScript;
 3. criar scripts de build, start, lint e testes;
-4. adicionar validação tipada das variáveis de ambiente;
+4. adicionar validação tipada das variáveis de ambiente (incluindo Cloudinary);
 5. padronizar erros e códigos HTTP;
-6. implementar testes de autenticação, autorização, validação e services;
+6. implementar testes de autenticação, autorização, validação, upload e services;
 7. documentar a API com OpenAPI/Swagger;
-8. completar os módulos de produto, pedido e item;
-9. revisar as exclusões em cascata para preservar o histórico dos pedidos;
-10. criar seed seguro para o primeiro administrador;
-11. restringir CORS e aplicar práticas de segurança para produção;
-12. expandir o README com setup e exemplos de requisição.
+8. completar os módulos de pedido e item;
+9. adicionar endpoints de edição/reativação de produto e CRUD completo de categorias;
+10. revisar as exclusões em cascata para preservar o histórico dos pedidos;
+11. criar seed seguro para o primeiro administrador;
+12. restringir CORS e aplicar práticas de segurança para produção;
+13. expandir o README com setup, variáveis Cloudinary e exemplos de requisição.
 
-## 16. Resumo arquitetural para continuidade
+## 17. Resumo arquitetural para continuidade
 
 Ao implementar uma nova funcionalidade, siga o padrão já adotado:
 
@@ -624,13 +837,14 @@ Ao implementar uma nova funcionalidade, siga o padrão já adotado:
 3. Criar o controller em src/controllers/<dominio>/
 4. Registrar a rota em src/routes.ts
 5. Encadear autenticação/autorização/validação conforme necessário
-6. Acessar o banco exclusivamente pelo prismaClient do src/prisma/index.ts
-7. Retornar pelo controller apenas os campos públicos necessários
-8. Adicionar testes para o service, middleware e endpoint
+6. Para uploads, configurar Multer em src/config/multer.ts e registrar upload.single('file') na rota
+7. Acessar o banco exclusivamente pelo prismaClient do src/prisma/index.ts
+8. Retornar pelo controller apenas os campos públicos necessários
+9. Adicionar testes para o service, middleware e endpoint
 ```
 
-O princípio central é manter o controller pequeno e deixar a regra de negócio no service. O controller conhece HTTP; o service conhece o caso de uso e a persistência; o Prisma concentra o acesso ao PostgreSQL.
+O princípio central é manter o controller pequeno e deixar a regra de negócio no service. O controller conhece HTTP; o service conhece o caso de uso, a persistência e integrações externas; o Prisma concentra o acesso ao PostgreSQL; o Cloudinary concentra o armazenamento de imagens.
 
 ---
 
-**Base da análise:** conteúdo do arquivo `pizzaria.zip`, incluindo manifestos, lockfile, código TypeScript, schema Prisma e migration disponíveis em 7 de agosto de 2026.
+**Base da análise:** código-fonte do repositório `pizzaria`, incluindo manifestos, lockfile, código TypeScript, schema Prisma, migration e histórico de commits até agosto de 2026.
