@@ -6,7 +6,7 @@
 - **Versão do backend:** `1.0.0`
 - **Nome apresentado no README:** `PROJETO TRATORIA`
 - **Tipo:** API REST para gerenciamento de uma pizzaria/tratoria
-- **Estado atual:** backend em desenvolvimento, com usuários, autenticação, categorias (criação e listagem) e produtos (criação com upload de imagem, listagem e exclusão lógica) implementados
+- **Estado atual:** backend em desenvolvimento, com usuários, autenticação, categorias (criação e listagem) e produtos (criação com upload de imagem, listagem geral, listagem por categoria e exclusão lógica) implementados
 - **Linguagem:** TypeScript
 - **Runtime:** Node.js
 - **Banco de dados:** PostgreSQL
@@ -51,6 +51,10 @@ flowchart TD
 `POST /product` → `isAuthenticated` → `isAdmin` → `upload.single('file')` → `validateSchema(createProductSchema)` → `CreateProductController` → `CreateProductService` → upload para Cloudinary (pasta `products`) → `prismaClient.product.create()` → PostgreSQL.
 
 O campo `banner` do produto armazena a URL segura (`secure_url`) retornada pelo Cloudinary, e não o arquivo em si.
+
+### Exemplo real: listar produtos por categoria
+
+`GET /category/product` → `isAuthenticated` → `validateSchema(listProductByCategorySchema)` → `ListProductByCategoryController` → `ListProductByCategoryService` → verifica existência da categoria → `prismaClient.product.findMany()` (apenas `disabled: false`) → PostgreSQL.
 
 ## 3. Tecnologias e versões
 
@@ -128,6 +132,7 @@ pizzaria/
         │   ├── product/
         │   │   ├── CreateProductController.ts
         │   │   ├── DeleteProductController.ts
+        │   │   ├── ListProductByCategoryController.ts
         │   │   └── ListProductsController.ts
         │   └── user/
         │       ├── AuthUserController.ts
@@ -150,7 +155,8 @@ pizzaria/
         │   ├── product/
         │   │   ├── CreateProductService.ts
         │   │   ├── DeleteProductService.ts
-        │   │   └── ListProductService.ts
+        │   │   ├── ListProductByCategoryServvice.ts
+        │   │   └── LIstProductService.ts
         │   └── user/
         │       ├── AuthUserService.ts
         │       ├── CreateUserService.ts
@@ -177,7 +183,7 @@ pizzaria/
 | `prisma/migrations/` | Histórico SQL da estrutura do banco |
 | `src/@types/express/` | Extensão do tipo `Express.Request` com `user_id` |
 
-Observação: a pasta está escrita como `midlewares`; a grafia convencional seria `middlewares`. O arquivo `ListCatgoryService.ts` também possui typo no nome (`Catgory` em vez de `Category`).
+Observação: a pasta está escrita como `midlewares`; a grafia convencional seria `middlewares`. Há typos em nomes de arquivos: `ListCatgoryService.ts` (`Catgory`), `LIstProductService.ts` (`LIst`) e `ListProductByCategoryServvice.ts` (`Servvice`).
 
 ## 5. Inicialização e configuração HTTP
 
@@ -202,6 +208,7 @@ Não existe prefixo global como `/api` ou `/v1`. Assim, os caminhos documentados
 | `GET` | `/me` | JWT | Não possui schema | `DetailUserController` | Dados do usuário autenticado; HTTP `200` |
 | `POST` | `/category` | JWT + perfil `ADMIN` | `createCategorySchema` | `CreateCategoryController` | Categoria criada; HTTP `201` |
 | `GET` | `/category` | JWT | Não possui schema | `ListCategoryController` | Lista de categorias; HTTP `200` |
+| `GET` | `/category/product` | JWT | `listProductByCategorySchema` (query) | `ListProductByCategoryController` | Produtos ativos de uma categoria; HTTP `200` |
 | `POST` | `/product` | JWT + perfil `ADMIN` | Multer (`file`) + `createProductSchema` | `CreateProductController` | Produto criado com URL do banner; HTTP `200` |
 | `GET` | `/products` | JWT | `listProductSchema` (query) | `ListProductsController` | Lista de produtos; HTTP `200` |
 | `DELETE` | `/product` | JWT + perfil `ADMIN` | Não possui schema | `DeleteProductController` | Produto arquivado (soft delete); HTTP `200` |
@@ -418,7 +425,49 @@ Authorization: Bearer TOKEN_JWT
 ]
 ```
 
-### 6.8. Excluir produto (soft delete)
+### 6.8. Listar produtos por categoria
+
+```http
+GET /category/product?category_id=UUID_DA_CATEGORIA
+Authorization: Bearer TOKEN_JWT
+```
+
+**Parâmetros de query**
+
+| Parâmetro | Tipo | Obrigatório | Descrição |
+|---|---|---|---|
+| `category_id` | string (UUID) | Sim | ID da categoria cujos produtos serão listados |
+
+**Regras**
+
+- usuário autenticado;
+- a categoria informada deve existir no banco; caso contrário, retorna erro `"Categoria não encontrada!"`;
+- retorna apenas produtos ativos (`disabled: false`); não há parâmetro para incluir produtos arquivados;
+- retorna dados do produto incluindo a categoria relacionada (`id` e `name`);
+- ordenação decrescente por `createdAt`.
+
+**Resposta HTTP 200**
+
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Pizza Margherita",
+    "price": 4500,
+    "description": "Molho, mussarela e manjericão",
+    "banner": "https://res.cloudinary.com/.../products/....jpg",
+    "disabled": false,
+    "category_id": "uuid-da-categoria",
+    "createdAt": "data-hora",
+    "category": {
+      "id": "uuid-da-categoria",
+      "name": "Pizzas tradicionais"
+    }
+  }
+]
+```
+
+### 6.9. Excluir produto (soft delete)
 
 ```http
 DELETE /product?product_id=UUID_DO_PRODUTO
@@ -527,6 +576,7 @@ O middleware valida, mas **não reatribui** os valores parseados de volta a `req
 | `createProductSchema` | `body.description` | string, mínimo 1 caractere |
 | `createProductSchema` | `body.category_id` | string (UUID da categoria) |
 | `listProductSchema` | `query.disabled` | enum `"true"` \| `"false"`, opcional, padrão `"false"` |
+| `listProductByCategorySchema` | `query.category_id` | string obrigatória (UUID da categoria) |
 
 A validação da presença do arquivo de imagem ocorre no `CreateProductController` (`req.file`), e não via Zod.
 
@@ -761,6 +811,7 @@ Principais respostas atuais:
 - listagem de categorias;
 - criação de produto com upload de imagem para Cloudinary;
 - listagem de produtos com filtro por status `disabled`;
+- listagem de produtos ativos por categoria (`GET /category/product`);
 - exclusão lógica de produto (`disabled: true`);
 - validação Zod;
 - upload multipart com Multer;
@@ -781,39 +832,41 @@ Principais respostas atuais:
 Esta seção registra o estado observado no código atual; nenhuma correção foi aplicada durante a atualização deste documento.
 
 1. **Erro no `CreateUserController`:** há import duplicado de `CreateUserService` e um import incorreto/não utilizado de `prismaClient` a partir do cliente gerado. Isso deve impedir a compilação TypeScript.
-2. **Typo no import de `ListProductsController`:** importa de `LIstProductService` (L maiúsculo no meio), enquanto o arquivo real é `ListProductService.ts`. Pode falhar em sistemas case-sensitive (Linux/macOS).
+2. **Typo no import de `ListProductsController`:** importa de `LIstProductService` (L maiúsculo no meio); o arquivo real também se chama `LIstProductService.ts`. Pode falhar em sistemas case-sensitive (Linux/macOS) se o import for corrigido sem renomear o arquivo.
 3. **Typo no nome do arquivo `ListCatgoryService.ts`:** grafia incorreta de "Category".
-4. **Scripts incompletos:** faltam `build`, `start`, `test` e `lint`; portanto, o projeto só oferece execução em modo watch.
-5. **Versão do Node não fixada:** convém adicionar `engines` e/ou `.nvmrc`.
-6. **TypeScript 7.0.2:** é uma versão muito nova e o próprio comentário do `tsconfig` ainda menciona TypeScript 5.6. A compatibilidade da cadeia de ferramentas deve ser validada.
-7. **Status de autorização:** usuário autenticado sem permissão administrativa recebe `401`; semanticamente, `403 Forbidden` é mais apropriado.
-8. **Tratamento global:** todos os objetos `Error` viram `400`, inclusive possíveis falhas internas do banco ou do Cloudinary. Recomenda-se uma classe de erro operacional com status explícito.
-9. **CORS irrestrito:** `cors()` aceita qualquer origem. Em produção, deve haver uma lista de origens permitidas.
-10. **JWT e Cloudinary sem validação de configuração:** se variáveis estiverem ausentes, o erro ocorrerá em execução. As variáveis devem ser validadas na inicialização.
-11. **Formato Bearer pouco defensivo:** o middleware não valida explicitamente o esquema `Bearer` nem a quantidade de partes do cabeçalho.
-12. **Busca por campo único:** login e cadastro usam `findFirst` para `email`, apesar de o campo ser único; `findUnique` expressa melhor essa regra.
-13. **Criação de usuário e produto retornam 200:** para consistência REST, o ideal seria HTTP `201`.
-14. **Categoria e produto sem unicidade:** nomes duplicados são aceitos pela modelagem atual.
-15. **Soft delete sem reativação:** não existe endpoint para reverter `disabled: true` em um produto.
-16. **Delete de produto sem validação Zod:** `product_id` é lido de `req.query` sem schema; ausência ou UUID inválido gera erro genérico.
-17. **Imagens órfãs no Cloudinary:** ao arquivar um produto, a imagem permanece no Cloudinary; não há rotina de limpeza.
-18. **Exclusão em cascata de produto:** apagar uma categoria remove produtos e itens históricos associados. Isso pode afetar a integridade histórica de pedidos.
-19. **Sem índices adicionais:** as chaves estrangeiras e campos usados em filtros frequentes podem precisar de índices conforme o volume crescer.
-20. **Sem paginação:** listagens de categorias e produtos retornam todos os registros; endpoints futuros devem prever paginação.
-21. **Sem testes automatizados:** não foram encontrados testes unitários, de integração ou end-to-end.
-22. **Sem documentação OpenAPI:** os contratos existem apenas no código.
-23. **Services instanciados diretamente:** controllers criam os services com `new`, o que funciona, mas dificulta isolamento e mocks em testes.
-24. **Captura genérica em services:** `CreateCategoryService`, `ListCategoryService`, `ListProductService` e `DeleteProductService` escondem a causa original e retornam mensagens genéricas.
-25. **Campos booleanos de estado:** `status` e `draft` em pedidos podem gerar estados ambíguos. Enums explícitos tornam o fluxo do pedido mais claro.
-26. **README insuficiente:** contém apenas o título e não orienta instalação, configuração ou uso.
-27. **Pacote duplicado na raiz:** o `package.json` da raiz declara apenas `bcryptjs`, também presente no backend; deve-se confirmar se esse manifesto é necessário.
-28. **`validateSchema` não propaga valores parseados:** transformações Zod (ex.: `listProductSchema`) não alteram `req.query`/`req.body` usados pelos controllers.
+4. **Typo no nome do arquivo `ListProductByCategoryServvice.ts`:** grafia incorreta de "Service" (`Servvice`); o controller importa desse caminho.
+5. **Listagem por categoria sem filtro `disabled`:** `GET /category/product` retorna sempre produtos ativos; não há parâmetro para listar arquivados de uma categoria específica.
+6. **Scripts incompletos:** faltam `build`, `start`, `test` e `lint`; portanto, o projeto só oferece execução em modo watch.
+7. **Versão do Node não fixada:** convém adicionar `engines` e/ou `.nvmrc`.
+8. **TypeScript 7.0.2:** é uma versão muito nova e o próprio comentário do `tsconfig` ainda menciona TypeScript 5.6. A compatibilidade da cadeia de ferramentas deve ser validada.
+9. **Status de autorização:** usuário autenticado sem permissão administrativa recebe `401`; semanticamente, `403 Forbidden` é mais apropriado.
+10. **Tratamento global:** todos os objetos `Error` viram `400`, inclusive possíveis falhas internas do banco ou do Cloudinary. Recomenda-se uma classe de erro operacional com status explícito.
+11. **CORS irrestrito:** `cors()` aceita qualquer origem. Em produção, deve haver uma lista de origens permitidas.
+12. **JWT e Cloudinary sem validação de configuração:** se variáveis estiverem ausentes, o erro ocorrerá em execução. As variáveis devem ser validadas na inicialização.
+13. **Formato Bearer pouco defensivo:** o middleware não valida explicitamente o esquema `Bearer` nem a quantidade de partes do cabeçalho.
+14. **Busca por campo único:** login e cadastro usam `findFirst` para `email`, apesar de o campo ser único; `findUnique` expressa melhor essa regra.
+15. **Criação de usuário e produto retornam 200:** para consistência REST, o ideal seria HTTP `201`.
+16. **Categoria e produto sem unicidade:** nomes duplicados são aceitos pela modelagem atual.
+17. **Soft delete sem reativação:** não existe endpoint para reverter `disabled: true` em um produto.
+18. **Delete de produto sem validação Zod:** `product_id` é lido de `req.query` sem schema; ausência ou UUID inválido gera erro genérico.
+19. **Imagens órfãs no Cloudinary:** ao arquivar um produto, a imagem permanece no Cloudinary; não há rotina de limpeza.
+20. **Exclusão em cascata de produto:** apagar uma categoria remove produtos e itens históricos associados. Isso pode afetar a integridade histórica de pedidos.
+21. **Sem índices adicionais:** as chaves estrangeiras e campos usados em filtros frequentes podem precisar de índices conforme o volume crescer.
+22. **Sem paginação:** listagens de categorias e produtos retornam todos os registros; endpoints futuros devem prever paginação.
+23. **Sem testes automatizados:** não foram encontrados testes unitários, de integração ou end-to-end.
+24. **Sem documentação OpenAPI:** os contratos existem apenas no código.
+25. **Services instanciados diretamente:** controllers criam os services com `new`, o que funciona, mas dificulta isolamento e mocks em testes.
+26. **Captura genérica em services:** `CreateCategoryService`, `ListCategoryService`, `ListProductService`, `ListProductByCategoryService` e `DeleteProductService` escondem a causa original e retornam mensagens genéricas.
+27. **Campos booleanos de estado:** `status` e `draft` em pedidos podem gerar estados ambíguos. Enums explícitos tornam o fluxo do pedido mais claro.
+28. **README insuficiente:** contém apenas o título e não orienta instalação, configuração ou uso.
+29. **Pacote duplicado na raiz:** o `package.json` da raiz declara apenas `bcryptjs`, também presente no backend; deve-se confirmar se esse manifesto é necessário.
+30. **`validateSchema` não propaga valores parseados:** transformações Zod (ex.: `listProductSchema`) não alteram `req.query`/`req.body` usados pelos controllers.
 
 ## 16. Recomendações de evolução
 
 Prioridade sugerida:
 
-1. corrigir os imports do `CreateUserController` e do `ListProductsController`, e renomear `ListCatgoryService.ts`;
+1. corrigir os imports do `CreateUserController` e do `ListProductsController`, e renomear `ListCatgoryService.ts`, `LIstProductService.ts` e `ListProductByCategoryServvice.ts`;
 2. fixar uma versão estável do Node.js e confirmar a versão do TypeScript;
 3. criar scripts de build, start, lint e testes;
 4. adicionar validação tipada das variáveis de ambiente (incluindo Cloudinary);
@@ -847,4 +900,4 @@ O princípio central é manter o controller pequeno e deixar a regra de negócio
 
 ---
 
-**Base da análise:** código-fonte do repositório `pizzaria`, incluindo manifestos, lockfile, código TypeScript, schema Prisma, migration e histórico de commits até agosto de 2026.
+**Base da análise:** código-fonte do repositório `pizzaria`, incluindo manifestos, lockfile, código TypeScript, schema Prisma, migration e histórico de commits até o commit `d295b64` (*list product by category*), agosto de 2026.
