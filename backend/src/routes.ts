@@ -17,13 +17,14 @@ import { ListProductsController } from './controllers/product/ListProductsContro
 import { DeleteProductController } from './controllers/product/DeleteProductController';
 import { ListProductByCategoryController } from './controllers/product/ListProductByCategoryController';
 import { CreateOrderController } from './controllers/order/CreateOrderController';
-import { addItemSchema, createOrderSchema, detailOrderSchema, finishOrderSchema, removeItemSchema, sendOrderSchema } from './schemas/createOrderSchema';
+import { addItemSchema, createOrderSchema, deleteOrderSchema, detailOrderSchema, finishOrderSchema, removeItemSchema, sendOrderSchema } from './schemas/createOrderSchema';
 import { ListOrdersController } from './controllers/order/ListOrdersController';
 import { AddItemController } from './controllers/order/AddItemController';
 import { RemoveItemController } from './controllers/order/RemoveItemController';
 import { DetailOrderController } from './controllers/order/DetailOrderController';
 import { SendOrderController } from './controllers/order/SendOrderController';
 import { FinishOrderController } from './controllers/order/FinishOrderController';
+import { DeleteOrderController } from './controllers/order/DeleteOrderController';
 
 
 const router = Router();
@@ -54,5 +55,5 @@ router.delete("/order/remove", isAuthenticated, validateSchema(removeItemSchema)
 router.get("/order/detail", isAuthenticated, validateSchema(detailOrderSchema) ,new DetailOrderController().handle);
 router.put("/order/send", isAuthenticated,  validateSchema(sendOrderSchema), new SendOrderController().handle );
 router.put("/order/finish", isAuthenticated,  validateSchema(finishOrderSchema), new FinishOrderController().handle );
-
+router.delete("/order", isAuthenticated, validateSchema(deleteOrderSchema), new DeleteOrderController().handle);
 export { router };
