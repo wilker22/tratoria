@@ -17,10 +17,12 @@ import { ListProductsController } from './controllers/product/ListProductsContro
 import { DeleteProductController } from './controllers/product/DeleteProductController';
 import { ListProductByCategoryController } from './controllers/product/ListProductByCategoryController';
 import { CreateOrderController } from './controllers/order/CreateOrderController';
-import { addItemSchema, createOrderSchema, removeItemSchema } from './schemas/createOrderSchema';
+import { addItemSchema, createOrderSchema, detailOrderSchema, removeItemSchema, sendOrderSchema } from './schemas/createOrderSchema';
 import { ListOrdersController } from './controllers/order/ListOrdersController';
 import { AddItemController } from './controllers/order/AddItemController';
 import { RemoveItemController } from './controllers/order/RemoveItemController';
+import { DetailOrderController } from './controllers/order/DetailOrderController';
+import { SendOrderController } from './controllers/order/SendOrderController';
 
 
 const router = Router();
@@ -48,6 +50,7 @@ router.post("/order", isAuthenticated, validateSchema(createOrderSchema), new Cr
 router.get("/orders", isAuthenticated, new ListOrdersController().handle);
 router.post("/order/add", isAuthenticated, validateSchema(addItemSchema),  new AddItemController().handle);
 router.delete("/order/remove", isAuthenticated, validateSchema(removeItemSchema) ,new RemoveItemController().handle);
-
+router.get("/order/detail", isAuthenticated, validateSchema(detailOrderSchema) ,new DetailOrderController().handle);
+router.put("/order/send", isAuthenticated, new SendOrderController().handle );
 
 export { router };
