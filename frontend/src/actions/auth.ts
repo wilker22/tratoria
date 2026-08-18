@@ -48,22 +48,22 @@ export async function loginAction(
 ){
     try{
         const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+        const password = formData.get("password") as string;
 
-    const data = {
-        email: email,
-        password: password
-    }
+        const data = {
+            email: email,
+            password: password
+        }
 
-    const response = await apiClient<AuthResponse>("/session", {
-        method:"POST",
-        body: JSON.stringify(data)
-    });
+        const response = await apiClient<AuthResponse>("/session", {
+            method:"POST",
+            body: JSON.stringify(data)
+        });
 
-    await setToken(response.token); 
-    
+        await setToken(response.token); 
+        
 
-    return { success: true, error: "", redirectTo: "/dashboard"}
+        return { success: true, error: "", redirectTo: "/dashboard"}
 
     }catch(error){
         if(error instanceof Error){
