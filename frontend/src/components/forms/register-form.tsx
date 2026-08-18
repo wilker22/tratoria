@@ -5,11 +5,19 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { registerAction} from "@/actions/auth";
+import { redirect, useRouter } from "next/navigation";
 
 export function RegisterForm() {
     const [state, formAction, isPending] = useActionState(registerAction, null);
+    const router = useRouter();
+
+    useEffect(() => {
+        if(state?.success && state.redirectTo){
+            router.replace(state?.redirectTo)
+        }
+    }, [state, router])
 
 
     return(
