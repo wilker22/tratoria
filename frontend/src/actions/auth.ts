@@ -45,7 +45,8 @@ export async function loginAction(
      prevState: { success: Boolean; error: string, redirectTo?: string} | null,
     formData: FormData
 ){
-    const email = formData.get("email") as string;
+    try{
+        const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
     const data = {
@@ -63,4 +64,13 @@ export async function loginAction(
     
 
     return { success: true, error: "", redirectTo: "/dashboard"}
+
+    }catch(error){
+        if(error instanceof Error){
+        return { success: false, error: error.message || "Erro ao tentar logar!"}
+        
+        }
+        return { success: false, error: "Erro ao tentar logar", redirectTo: "/dashboard"};
+
+    }
 }
