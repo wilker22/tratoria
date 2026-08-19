@@ -1,3 +1,4 @@
+import { Sidebar } from "@/components/dashboard/sidebar";
 import { requiredAdmin } from "@/lib/auth"
 
 export default async function DashboardLayout({
@@ -10,8 +11,12 @@ export default async function DashboardLayout({
 
     return(
         
-        <div>
-            
+        <div className="flex h-screen overflow-hidden text-white">
+           
+            {/*SIDEBAR PARA AMBIENTE DESKTOP*/}
+            <Sidebar userName={user.name} />
+           
+           
             {children}
         </div>
     )
