@@ -1,4 +1,4 @@
-import { MobileSidebar } from "@/components/dashboard/mobile-sidevar";
+import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { requiredAdmin } from "@/lib/auth"
 
