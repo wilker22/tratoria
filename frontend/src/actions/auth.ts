@@ -1,8 +1,10 @@
 "use server";
 
 import { apiClient } from "@/lib/api";
-import { setToken } from "@/lib/auth";
+import { removeToken, setToken } from "@/lib/auth";
 import { AuthResponse, User } from "@/lib/types";
+import { redirect } from "next/navigation";
+
  
 
 
@@ -74,3 +76,9 @@ export async function loginAction(
 
     }
 }
+
+export async function logoutAction() {
+    await removeToken();
+    redirect("/login");
+
+} 
