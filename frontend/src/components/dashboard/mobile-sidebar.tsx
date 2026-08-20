@@ -57,7 +57,7 @@ export function MobileSidebar() {
 
             <SheetContent
               side="left"
-              className="w-72 p-0 bg-app-sidebar border-app-border  font-mono"
+              className="w-72 p-0 bg-app-sidebar border-app-border font-mono"
             >
               <SheetHeader className="border-b border-app-border p-6 ">
                 <SheetTitle className="text-xl text-white font-bold">
@@ -88,7 +88,7 @@ export function MobileSidebar() {
                   );
                 })}
               </nav>
-
+ 
               <div className="absolute bottom-0 border-t w-full border-app-border p-4">
                 <form action={logoutAction}>
                   <Button

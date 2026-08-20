@@ -4,7 +4,7 @@ import { requiredAdmin } from "@/lib/auth"
         
         return (
             <div>
-                <h1>Deshboard</h1>
+                <h1>Dashboard</h1>
             </div>
         )
     }
