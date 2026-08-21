@@ -1,3 +1,4 @@
+import { CategoryForm } from "@/components/dashboard/category-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
 import { getToken } from "@/lib/auth"
@@ -21,7 +22,7 @@ import { Tags } from "lucide-react";
                         </p>
                     </div>
 
-                    <button>TESTE</button>
+                    <CategoryForm />
                 </div>
 
                 {categories.length != 0 && (
