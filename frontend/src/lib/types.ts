@@ -14,3 +14,9 @@ export interface AuthResponse {
     role: "ADMIN" | "STAFF";
     token: string;
 }
+
+export interface Category{
+    id: string,
+    name: string,
+    createdAt: string,
+}

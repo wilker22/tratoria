@@ -1,4 +1,5 @@
-"use client"
+"use client";
+
 import { cn } from "@/lib/utils";
 import { ShoppingCart, Package, Tags, LogOut, Menu } from "lucide-react";
 import Link from "next/link";
@@ -16,9 +17,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useState } from "react";
-interface SidebarProps{
-    userName: string;
-}
 
 const menuItems = [
   {
@@ -43,23 +41,21 @@ export function MobileSidebar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="lg:hidden font-mono">
-      <header className="sticky top-0 z-50 border-b border-app-border bg-app-card  font-mono">
+    <div className="lg:hidden">
+      <header className="sticky top-0 z-50 border-b border-app-border bg-app-card">
         <div className="flex h-16 items-center justify-between px-4">
           <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger>
-                <Button  variant="ghost" size={"icon"}>
-                    <Menu className="h-6 w-6" />
-                </Button>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size={"icon"}>
+                <Menu className="h-6 w-6" />
+              </Button>
             </SheetTrigger>
-            
-          
 
             <SheetContent
               side="left"
-              className="w-72 p-0 bg-app-sidebar border-app-border font-mono"
+              className="w-72 p-0 bg-app-sidebar border-app-border"
             >
-              <SheetHeader className="border-b border-app-border p-6 ">
+              <SheetHeader className="border-b border-app-border p-6">
                 <SheetTitle className="text-xl text-white font-bold">
                   Menu
                 </SheetTitle>
@@ -88,7 +84,7 @@ export function MobileSidebar() {
                   );
                 })}
               </nav>
- 
+
               <div className="absolute bottom-0 border-t w-full border-app-border p-4">
                 <form action={logoutAction}>
                   <Button
@@ -105,7 +101,7 @@ export function MobileSidebar() {
           </Sheet>
 
           <h1 className="text-lg font-bold">
-            WJ<span className="text-brand-primary">Pizza</span>
+            Sujeito<span className="text-brand-primary">Pizza</span>
           </h1>
           <div className="w-10"></div>
         </div>
