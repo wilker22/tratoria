@@ -30,11 +30,13 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ categories }: ProductFormProps) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const router = useRouter()
+  
+  
 
   async function handleCreateProduct(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -115,7 +117,7 @@ export function ProductForm({ categories }: ProductFormProps) {
               min="0.01"
               step="0.01"
               required
-              placeholder="45.00"
+              placeholder="45,00"
               className="border-app-border bg-app-background text-white"
             />
           </div>
@@ -128,7 +130,7 @@ export function ProductForm({ categories }: ProductFormProps) {
               </SelectTrigger>
               <SelectContent className="bg-app-card text-white border-app-border">
                 {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
+                  <SelectItem key={category.id} value={category.id} className="hover:bg-transparent cursor-pointer">
                     {category.name}
                   </SelectItem>
                 ))}
