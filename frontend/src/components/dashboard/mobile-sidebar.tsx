@@ -45,11 +45,13 @@ export function MobileSidebar() {
       <header className="sticky top-0 z-50 border-b border-app-border bg-app-card">
         <div className="flex h-16 items-center justify-between px-4">
           <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size={"icon"}>
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SheetTrigger>
+            <SheetTrigger
+                render={
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                }
+            />
 
             <SheetContent
               side="left"
