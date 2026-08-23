@@ -5,6 +5,7 @@ import { getToken } from "@/lib/auth";
 import { Product } from "@/lib/types";
 import { revalidatePath } from "next/cache";
 
+
 export async function createProductAction(formData: FormData) {
     try {
         const token = await getToken();

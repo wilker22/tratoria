@@ -10,10 +10,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Plus, Upload } from "lucide-react"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { Plus } from "lucide-react"
+import { Label } from "../ui/label"
+import { Input } from "../ui/input"
+import { Textarea } from "../ui/textarea"
 import {
   Select,
   SelectContent,
@@ -24,7 +24,6 @@ import {
 import { createProductAction } from "@/actions/products"
 import { useRouter } from "next/navigation"
 import { Category } from "@/lib/types"
-import Image from "next/image"
 
 interface ProductFormProps {
   categories: Category[]
@@ -37,11 +36,9 @@ export function ProductForm({ categories }: ProductFormProps) {
     value: category.id,
     label: category.name,
   }))
-  const [categoryId, setCategoryId]     = useState<string | null>(null)
-  const [error, setError]               = useState("")
+  const [categoryId, setCategoryId] = useState<string | null>(null)
+  const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [imageFile, setImageFile]       = useState<File | null>(null)
   
   
 
@@ -72,30 +69,6 @@ export function ProductForm({ categories }: ProductFormProps) {
 
     setError(result.error)
   }
-
-  function handleImageChange(e:React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if(file){
-      if(file.size > 5 * 1024 * 1024 ){
-        return;
-      }
-     
-      setImageFile(file)
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string)
-      }
-
-      reader.readAsDataURL(file);
-    }
-  }
-
-  function clearImage() {
-    setImageFile(null);
-    setImagePreview(null);
-  }
-
-
 
   return (
     <Dialog
@@ -187,61 +160,18 @@ export function ProductForm({ categories }: ProductFormProps) {
             />
           </div>
 
-          <div className="space-y-2">
+          <div>
             <Label className="mb-2" htmlFor="file">
               Imagem
             </Label>
-           
-           {imagePreview ? (
-            <div className="relative w-full h-48 border rounded-lg overflow-hidden">
-              <Image
-                  src={imagePreview}
-                  alt="preview da imagem"
-                  fill
-                  className="object-cover z-10"
-                />
-
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={clearImage}
-                  className="absolute top-2 right-2 z-20 bg-brand-primary text-white hover:text-black"
-                >
-                Excluir
-              </Button>
-            </div>
-           ) : (
-            <div className="border-2 border-dashed rounded-md p-8 flex flex-col items-center justify-center">
-              <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-              <Label htmlFor="file">
-                Selecione uma imagem...
-              </Label>
-              <Input
-                id="file"
-                name="file"
-                type="file"
-                accept="image/jpeg, image/jpg, image/png"
-                onChange={handleImageChange}
-                required
-                className="hidden"
-              >
-              </Input>
-            </div>
-
-           )}
-           
-           
-           {/** <Input
+            <Input
               id="file"
               name="file"
               type="file"
               accept="image/*"
               required
               className="border-app-border bg-app-background text-white file:text-white"
-            /> */}
-
-
-
+            />
           </div>
 
           {error && (
