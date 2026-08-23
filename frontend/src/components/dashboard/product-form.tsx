@@ -32,6 +32,10 @@ interface ProductFormProps {
 export function ProductForm({ categories }: ProductFormProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const categoryItems = categories.map((category) => ({
+    value: category.id,
+    label: category.name,
+  }))
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -124,7 +128,12 @@ export function ProductForm({ categories }: ProductFormProps) {
 
           <div>
             <Label className="mb-2">Categoria</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
+           {/** <Select value={categoryId} onValueChange={setCategoryId}>*/} 
+              <Select
+                items={categoryItems}
+                value={categoryId}
+                onValueChange={setCategoryId}
+              >
               <SelectTrigger className="w-full border-app-border bg-app-background text-white">
                 <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
