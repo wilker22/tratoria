@@ -30,7 +30,7 @@ import {
 } from "@/actions/orders"
 import { useRouter } from "next/navigation"
 import { Trash2 } from "lucide-react"
-import { OrderStatusBadge } from "./order-status-badge"
+import { OrderStatusBadge } from "./order-status-badge_"
 
 interface OrderDetailsProps {
   order: Order
