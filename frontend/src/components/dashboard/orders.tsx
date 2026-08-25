@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { formatPrice } from "@/lib/format";
+import OrderModal from "@/components/dashboard/order-modal";
 
 interface OrdersProps{
     token: string;
@@ -17,6 +18,7 @@ interface OrdersProps{
 export function Orders({ token } : OrdersProps) {
     const [loading, setLoading] = useState(true);
     const [orders, setOrders] = useState<Order[]>([]);
+    const [selectedOrder, setSelectedOrder] = useState<null | string>(null)
 
     const fetchOrders = async () => {
         try{
@@ -25,7 +27,10 @@ export function Orders({ token } : OrdersProps) {
                 cache: "no-store",
                 token: token,
             });
-            setOrders(response);
+            //apenas as order com status=false
+            const pendingOrders = response.filter(order => !order.status)
+            
+            setOrders(pendingOrders);
             setLoading(false);
         }catch(err){
             setLoading(false);
@@ -56,18 +61,21 @@ export function Orders({ token } : OrdersProps) {
                         Pedidos enviados para a cozinha
                     </p>
                 </div>
-                <Button className=" bg-brand-primary text-white hover:bg-brand-primary">
-                    <RefreshCcw className="w-5 h-5"/>
+                <Button 
+                    className=" bg-brand-primary text-white hover:bg-brand-primary"
+                    onClick={fetchOrders}
+                >
+                    <RefreshCcw className="w-5 h-5"/> Atualizar
                 </Button>
             </div>
 
             {loading ? (
                 <div>
-                    <p>Carregando pedidos...</p>
+                    <p  className="text-center text-grey-300">Carregando pedidos...</p>
                 </div>
             ) : orders.length === 0 ? (
                 <div>
-                    <p>Nenhum pedido cadastrado...</p>
+                    <p className="text-center text-grey-300">Nenhum pedido cadastrado...</p>
                 </div>
             ) : (
                 <div className="grid gap-4 sm:gri-cols-2 lg:grid-cols-3">
@@ -102,14 +110,19 @@ export function Orders({ token } : OrdersProps) {
                                     )}
                                 </div>
 
-                                <div className="flex flex-col xl:flex-row items-center justifyy-between pt-4 border-t border-app-border">
+                                <div className="flex flex-col xl:flex-row items-center justify-between pt-4 border-t border-app-border gap-4">
                                     <div className="self-start">
                                         <p className="text-sm md:text-base text-gray-400">Total</p>
                                         <p className="text-base font-bold text-brand-primary">{formatPrice(calculateOrderTotal(order))}</p>
                                     </div>
                                     
-                                    <Button size="sm" className="bg-brand-primary hover:bg-brand-primary w-full xl:w-auto">
+                                    <Button 
+                                        size="lg" 
+                                        className="bg-brand-primary hover:bg-brand-primary w-full xl:w-auto"
+                                        onClick={() => setSelectedOrder(order.id)}
+                                    >
                                         <EyeIcon className="w-5 h-5" />
+                                        Detalhes
                                     </Button>
                                 </div>
                             </CardContent>
@@ -118,6 +131,14 @@ export function Orders({ token } : OrdersProps) {
                     ))}
                 </div>
             )}
+            <OrderModal 
+                orderId={selectedOrder}
+                onClose={ async () => {
+                    setSelectedOrder(null);
+                    await fetchOrders();
+                }}
+                token={token}
+            />
           </div>
     );
 }
