@@ -28,7 +28,7 @@ export async function finishOrderAction(orderId: string) {
 
         return {success: true, error: ""}
    }catch(err){
-        console.log(err);
+        console.log(err);   
         return { success: false, error: "Falha ao finalizar o pedido" }
    }
 }
