@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/format";
+import { finishOrderAction } from "@/actions/orders_";
+import { useRouter } from "next/navigation";
 
 
 interface OrderModalProps{
@@ -23,6 +25,7 @@ export default function OrderModal({orderId, token, onClose} : OrderModalProps) 
 
     const [order, setOrder] = useState<Order | null>(null)
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
     
       const fetchOrder = async () => {
            if(!orderId) {
@@ -61,6 +64,20 @@ export default function OrderModal({orderId, token, onClose} : OrderModalProps) 
             }, 0);
         };
 
+        const handleFinishOrder = async () => {
+          if(!orderId) return;
+          const result = await finishOrderAction(orderId)
+
+          if(!result.success){
+            console.log(result.error)
+          }
+
+          if(result.success){
+            router.refresh();
+            onClose();
+            
+          }
+        };
        
     return (
     <Dialog open={orderId !== null} onOpenChange={() => onClose()}>
@@ -91,7 +108,7 @@ export default function OrderModal({orderId, token, onClose} : OrderModalProps) 
               </div>
               <div>
                 <p className="text-sm text-gray-400 mb-1">Status</p>
-                <span className="inline-block px-3 py-1 bg-orange-500/20 text-orange-500 rounded-full text-sm font-medium">
+                <span className="inline-block px-3 py-1 bg-orange-500/20 text-orange-500 rounded-full text-xs font-medium">
                   Em Preparo...
                 </span>
               </div>
@@ -164,6 +181,7 @@ export default function OrderModal({orderId, token, onClose} : OrderModalProps) 
           <Button
             className="flex-1 bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold"
             disabled={loading}
+            onClick={handleFinishOrder}
           >
             Finalizar pedido
           </Button>

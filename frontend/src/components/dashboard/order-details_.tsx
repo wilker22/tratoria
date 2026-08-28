@@ -27,7 +27,7 @@ import {
   finishOrderAction,
   removeOrderItemAction,
   sendOrderAction,
-} from "@/actions/orders"
+} from "@/actions/orders_"
 import { useRouter } from "next/navigation"
 import { Trash2 } from "lucide-react"
 import { OrderStatusBadge } from "./order-status-badge_"
