@@ -1,22 +1,37 @@
 import { Button } from "@/components/button";
 import { Input } from "@/components/Input";
 import { colors, fontSize, spacing } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
   Text,
-  View
+  View,
 } from "react-native";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
 
-  function handleLogin() {
-    console.log({ email, password });
+  async function handleLogin() {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Atenção", "Preencha todos os campos!");
+    }
+
+    try {
+      setLoading(true);
+      await signIn(email, password);
+    } catch (err) {
+      console.log(err);
+      Alert.alert("Erro", "Erro ao fazer o login");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
