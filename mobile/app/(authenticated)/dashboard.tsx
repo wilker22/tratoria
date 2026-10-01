@@ -4,6 +4,7 @@ export default function Dashboard() {
   return (
     <View>
       <Text>Página Dashboard</Text>
+      <Text>Página Dashboard</Text>
     </View>
   );
 }
