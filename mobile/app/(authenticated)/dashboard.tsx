@@ -48,6 +48,7 @@ export default function Dashboard() {
         pathname: "/(authenticated)/order",
         params: { table: response.data.table, order_id: response.data.id },
       });
+      setTableNumber("");
     } catch (err) {
       console.log(err);
       Alert.alert("Error", "Falha ao abrir a mesam tente mais tarde");
