@@ -12,6 +12,7 @@ interface AuthContextData {
   signed: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext({} as AuthContextData);
@@ -35,8 +36,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const storedToken = await AsyncStorage.getItem("@token:pizzaria");
       const storedUser = await AsyncStorage.getItem("@user:pizzaria");
 
-      console.log(storedToken);
-      console.log(storedUser);
+      if (storedToken && storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
     } catch (error) {
       console.log(error);
     } finally {
@@ -65,13 +67,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  async function signOut() {
+    await AsyncStorage.multiRemove(["@user:pizzaria", "@token:pizzaria"]);
+    setUser(null);
+  }
+
   return (
     <AuthContext
       value={{
-        signed,
+        signed: !!user, //true or false
         loading,
         signIn,
         user,
+        signOut,
       }}
     >
       {children}
